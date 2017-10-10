@@ -307,16 +307,40 @@ private airNowCategory() {
 			log.debug("${resp.data[0].ParameterName}: ${resp.data[0].AQI}, ${resp.data[0].Category.Name} (${resp.data[0].Category.Number})")
 			log.debug("${resp.data[1].ParameterName}: ${resp.data[1].AQI}, ${resp.data[1].Category.Name} (${resp.data[1].Category.Number})")
 
-			// We're only interested in whichever is the worst of the 2 categories, so figure out which one has the higher number and store it
-			if(resp.data[0].Category.Number.toInteger() > resp.data[1].Category.Number.toInteger()) {
-				result = ["name": resp.data[0].Category.Name, "number": resp.data[0].Category.Number.toInteger()]
-			} else {
-				result = ["name": resp.data[1].Category.Name, "number": resp.data[1].Category.Number.toInteger()]
-			}						
+			def aqi0 = -1
+            def aqi1 = -1
+
+			// Check the first observation is in defined range, then store it
+			if ((resp.data[0].AQI >= 0) && (resp.data[0].AQI <= 2000)) {
+            	aqi0 = resp.data[0].AQI
+            } else {
+                log.error("AirNow returned an AQI of ${resp.data[0].AQI} for ${resp.data[0].ParameterName}. Ignoring as this is probably invalid.")
+            }
+
+			// Check the second observation is in defined range, then store it
+			if ((resp.data[1].AQI >= 0) && (resp.data[1].AQI <= 2000)) {
+            	aqi1 = resp.data[1].AQI
+            } else {
+                log.error("AirNow returned an AQI of ${resp.data[1].AQI} for ${resp.data[1].ParameterName}. Ignoring as this is probably invalid.")
+            }
+
+			// Check we got at least one valid observation
+			if ((aqi0 > -1) || (aqi1 > -1)) {
+
+                // We're only interested in whichever is the worst of the 2 categories, so figure out which one has the higher number and store it
+                if(aqi0 > aqi1) {
+                    result = ["name": resp.data[0].Category.Name, "number": resp.data[0].Category.Number.toInteger()]
+                } else {
+                    result = ["name": resp.data[1].Category.Name, "number": resp.data[1].Category.Number.toInteger()]
+                }
+            } else {
+                log.debug("Failed to retrieve valid air quality data from AirNow.")
+            	result = ["name": "Invalid", "number": -1]
+            }
 		}
 
 		// Ignore AQI result if it is less than the configured alert category
-		if(result.number >= airNowCat.toInteger()) {
+		if (result.number >= airNowCat.toInteger()) {
 			state.lastCheck = ["time": now(), "result": result]
 		} else {
 			state.lastCheck = ["time": now(), "result": false]
