@@ -22,6 +22,9 @@
  *	9/9/2017 by jschlackman (james@schlackman.org)
  *	Added option to check air quality as well as (or instead of) rain.
  *
+ *	10/12/2017 by jschlackman (james@schlackman.org)
+ *	Added option to check pollen index.
+ *
  */
 
 definition(
@@ -45,6 +48,14 @@ preferences {
 	section("Forecast Options") {
 		input "forecastType", "enum", title: "Forecast range", options: ["Today", "Next Hour"], defaultValue: "Today", required: true
 		input "checkRain", "enum", title: "Check for rain?", options: ["Yes", "No"], defaultValue: "Yes", required: true
+		input "pollenCat", "enum", title: "Alert on this pollen index category or worse", required: false, options: [
+			1:"Low",
+			2:"Low-Medium",
+			3:"Medium",
+			4:"Medium-High",
+			5:"High",
+			6:"Do not alert"
+		]
 		input "checkAir", "enum", title: "Check air quality? (Requires API key to be set in IDE)", options: ["Yes", "No"], defaultValue: "No", required: true
 		input "airNowCat", "enum", title: "Alert on this air quality or worse", required: true, defaultValue: 2, options: [
 			1:"Good",
@@ -136,6 +147,15 @@ def scheduleCheck(evt) {
 		}
 
 	}
+	
+	// If configured to check pollen, get the pollen index category.
+	if(pollenCat > 0) {
+		state.pollenCategory = pollenCategory()
+		if(state.pollenCategory.number >= pollenCat.toInteger()) {
+			sendAlert = true
+		}
+
+	}
 
 	// Send alert if either rain or AQI check requires it.
 	if(sendAlert) {
@@ -175,7 +195,7 @@ def send() {
 	}
 
 	// Send message about air quality if it meets or exceeds the requested alert category
-	if(state.airCategory.number >= airNowCat.toInteger()) {
+	if((checkAir) && (state.airCategory.number >= airNowCat.toInteger())) {
 		
 		msg = msg + " Air Quality "
 		if(forecastType == "Today") {
@@ -183,6 +203,11 @@ def send() {
 		}
 		msg = msg + "is ${state.airCategory.name}."
 	}
+	
+	// Send message about pollen index if it meets or exceeds the requested alert category
+	if((pollenCat) && (state.pollenCategory.number >= pollenCat.toInteger())) {
+		msg = msg + " pollen index is ${state.pollenCategory.name}."
+	}	
 
 	if(open) {
 		if(now() - delay > state.lastMessage) {
@@ -288,9 +313,9 @@ private airNowCategory() {
 	} else {
 		requestPath = 'observation/zipCode/current/'
 	}
-    
-    log.debug("Getting AirNow data: ${requestPath}")
-    
+	
+	log.debug("Getting AirNow data: ${requestPath}")
+	
 	// Set up the AirNow API query
 	def params = [
 		uri: 'http://www.airnowapi.org/aq/',
@@ -302,41 +327,41 @@ private airNowCategory() {
 	try {
 	// Send query to the AirNow API
 		httpGet(params) {resp ->
-            state.aqi = resp.data
+			state.aqi = resp.data
 			// Print the AQI numbers and categories for both PM2.5 and O3 to the debug log.
 			log.debug("${resp.data[0].ParameterName}: ${resp.data[0].AQI}, ${resp.data[0].Category.Name} (${resp.data[0].Category.Number})")
 			log.debug("${resp.data[1].ParameterName}: ${resp.data[1].AQI}, ${resp.data[1].Category.Name} (${resp.data[1].Category.Number})")
 
 			def aqi0 = -1
-            def aqi1 = -1
+			def aqi1 = -1
 
 			// Check the first observation is in defined range, then store it
 			if ((resp.data[0].AQI >= 0) && (resp.data[0].AQI <= 2000)) {
-            	aqi0 = resp.data[0].AQI
-            } else {
-                log.error("AirNow returned an AQI of ${resp.data[0].AQI} for ${resp.data[0].ParameterName}. Ignoring as this is probably invalid.")
-            }
+				aqi0 = resp.data[0].AQI
+			} else {
+				log.error("AirNow returned an AQI of ${resp.data[0].AQI} for ${resp.data[0].ParameterName}. Ignoring as this is probably invalid.")
+			}
 
 			// Check the second observation is in defined range, then store it
 			if ((resp.data[1].AQI >= 0) && (resp.data[1].AQI <= 2000)) {
-            	aqi1 = resp.data[1].AQI
-            } else {
-                log.error("AirNow returned an AQI of ${resp.data[1].AQI} for ${resp.data[1].ParameterName}. Ignoring as this is probably invalid.")
-            }
+				aqi1 = resp.data[1].AQI
+			} else {
+				log.error("AirNow returned an AQI of ${resp.data[1].AQI} for ${resp.data[1].ParameterName}. Ignoring as this is probably invalid.")
+			}
 
 			// Check we got at least one valid observation
 			if ((aqi0 > -1) || (aqi1 > -1)) {
 
-                // We're only interested in whichever is the worst of the 2 categories, so figure out which one has the higher number and store it
-                if(aqi0 > aqi1) {
-                    result = ["name": resp.data[0].Category.Name, "number": resp.data[0].Category.Number.toInteger()]
-                } else {
-                    result = ["name": resp.data[1].Category.Name, "number": resp.data[1].Category.Number.toInteger()]
-                }
-            } else {
-                log.debug("Failed to retrieve valid air quality data from AirNow.")
-            	result = ["name": "Invalid", "number": -1]
-            }
+				// We're only interested in whichever is the worst of the 2 categories, so figure out which one has the higher number and store it
+				if(aqi0 > aqi1) {
+					result = ["name": resp.data[0].Category.Name, "number": resp.data[0].Category.Number.toInteger()]
+				} else {
+					result = ["name": resp.data[1].Category.Name, "number": resp.data[1].Category.Number.toInteger()]
+				}
+			} else {
+				log.debug("Failed to retrieve valid air quality data from AirNow.")
+				result = ["name": "Invalid", "number": -1]
+			}
 		}
 
 		// Ignore AQI result if it is less than the configured alert category
@@ -349,9 +374,78 @@ private airNowCategory() {
 	}
 	catch (e) {
 		log.error("Could not retrieve AQI: $e")
-        // AQI information could not be retrieved
-        result = ["name": "Unavailable", "number": 0]
+		// AQI information could not be retrieved
+		result = ["name": "Unavailable", "number": 0]
 	}
 
+	return result
+}
+
+// Get pollen category data from the Pollen.com API
+private pollenCategory() {
+	def result = null
+	def pollenZip = null
+
+	// Use hub zipcode if user has not defined their own
+	if(zipCode) {
+		pollenZip = checkZip
+	} else {
+		pollenZip = location.zipCode
+	}
+	
+	log.debug("Getting pollen data for ZIP: ${pollenZip}")
+	
+	// Set up the Pollen.com API query
+	def params = [
+		uri: 'https://www.pollen.com/api/forecast/current/pollen/',
+		path: pollenZip,
+		headers: [Referer:'https://www.pollen.com']
+	]
+
+	try {
+	// Send query to the Pollen.com API
+		httpGet(params) {resp ->
+
+			// Parse the periods data array
+
+			def catNum = -1
+			def catName = ""
+			def indexNum = resp.data.Location.periods[1].Index.toFloat()
+
+			// Set the category number according to index thresholds
+			if (indexNum < 2.5) {catNum = 1; catName = "Low"}
+			else if (indexNum < 4.9) {catNum = 2; catName = "Low-Medium"}
+			else if (indexNum < 7.3) {catNum = 3; catName = "Medium"}
+			else if (indexNum < 9.7) {catNum = 4; catName = "Medium-High"}
+			else if (indexNum < 12) {catNum = 5; catName = "High"}
+			else {catNum = 0; catName = "Unknown"}
+
+			// Check we got at a valid category
+			if (catNum > 0) {
+				result = ["name": catName, "number": catNum.toInteger()]
+			} else {
+				log.debug("Failed to retrieve valid pollen data.")
+				result = ["name": "Invalid", "number": -1]
+			}
+		}
+
+		// Ignore pollen category result if it is less than the configured alert category
+		if (result.number >= pollenCat.toInteger()) {
+			state.lastCheck = ["time": now(), "result": result]
+		} else {
+			state.lastCheck = ["time": now(), "result": false]
+		}
+
+	}
+	catch (SocketTimeoutException e) {
+		log.error("Connection to Pollen.com API timed out.")
+		result = ["name": "Unavailable", "number": 0]
+	}
+	catch (e) {
+		log.error("Could not retrieve pollen data: $e")
+		result = ["name": "Unavailable", "number": 0]
+	}
+
+	log.debug result
 	return result
 }
