@@ -6,7 +6,8 @@ This SmartThings app is a fork of [Ready for Rain](https://github.com/imbrianj/r
 
 * An option to check the hourly forecast instead of the whole day forecast, which is useful during days with changeable weather.
 * The ability to send TTS alerts to a configured media speaker (devices with **capability.musicPlayer**)
-* An option to check the Air Quality Index via the U.S. EPA [AirNow API](https://docs.airnowapi.org/) in addition to (or instead of) the rain forecast.
+* An option to check and alert on the Air Quality Index via the U.S. EPA [AirNow API](https://docs.airnowapi.org/).
+* An option to check and alert on the pollen index via Pollen.com.
 
 ## Setup
 
