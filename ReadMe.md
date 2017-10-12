@@ -27,6 +27,7 @@ This SmartThings app is a fork of [Ready for Rain](https://github.com/imbrianj/r
 ## Acknowledgements
 
 * Special thanks to [imbrianj](https://github.com/imbrianj) for the original **Ready for Rain** SmartApp and to [motley74](https://github.com/motley74) for his contributions.
+* Thanks to [arsaboo](https://github.com/arsaboo/) for sharing the method for querying the Pollen.com API methods in his HomeAssistant config.
 * App icons provided courtesy of [WebHostFace](https://www.webhostface.com/blog/material-design-icons/).
 
 ## Air Quality Data Limitations
