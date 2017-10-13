@@ -2,28 +2,12 @@
  *	Ready for Nature
  *
  *	Author: brian@bevey.org, james@schlackman.org, motley74@gmail.com
- *	Date: 9/9/17
+ *  Version: 1.1
+ *	Date: 2017-10-12
  *
  *	Warn if doors or windows are open when inclement weather is approaching.
  *
- *	Changelog:
- *
- *	4/15/2016 by motley74 (motley74@gmail.com)
- *	Added ability to set delay before attempting to send message,
- *	will cancel alert if contacts closed within delay.
- *
- *	6/23/2017 by jschlackman (james@schlackman.org)
- *	Added option to use hourly forecast instead of daily.
- *	Added option for TTS notifications on a connected media player.
- *
- *	7/11/2017 by jschlackman (james@schlackman.org)
- *	Added option to include the chain of rain in the alert message.
- *
- *	9/9/2017 by jschlackman (james@schlackman.org)
- *	Added option to check air quality as well as (or instead of) rain.
- *
- *	10/12/2017 by jschlackman (james@schlackman.org)
- *	Added option to check pollen index.
+ *	Latest version & ReadMe: https://github.com/jschlackman/ReadyForNature
  *
  */
 
