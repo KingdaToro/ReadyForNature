@@ -37,3 +37,10 @@ Data returned is subject to the [limitations of the AirNow API](https://docs.air
 The [EPA's AQI categories](https://airnow.gov/index.cfm?action=aqi_brochure.index) work on a scale from 0-500. Anything above 300 categorized as **Hazardous**, and according to the EPA, such conditions are "extremely rare" in the US and "generally occur only during events such as forest fires".
 
 Values above 500 are categorized as **Beyond Index**, but have occasionally been reported in extremely polluted areas of China, so they are technically possible. It therefore seems prudent to allow for extreme readings, but at the same time set an upper limit beyond which values are considered to be an error.
+
+## Using Air Quality and Pollen data in other apps
+
+If you are interested in accessing the AirNow air quality index and/or the pollen index data for use in other apps, you may be intersted in these standalone virtual device type handlers that expose the data for use in other apps such as [webCoRE](https://wiki.webcore.co/):
+
+* [AirNow Virtual Sensor](https://github.com/jschlackman/AirNow)
+* [Pollen Virtual Sensor](https://github.com/jschlackman/PollenThing)
