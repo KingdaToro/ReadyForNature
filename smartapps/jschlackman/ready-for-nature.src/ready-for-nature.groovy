@@ -181,16 +181,16 @@ def send() {
 	// Send message about air quality if it meets or exceeds the requested alert category
 	if((checkAir) && (state.airCategory.number >= airNowCat.toInteger())) {
 		
-		msg = msg + " Air Quality "
+		msg = msg + "Air Quality "
 		if(forecastType == "Today") {
 			msg = msg + "forecast " 
 		}
-		msg = msg + "is ${state.airCategory.name}."
+		msg = msg + "is ${state.airCategory.name}. "
 	}
 	
 	// Send message about pollen index if it meets or exceeds the requested alert category
 	if((pollenCat) && (state.pollenCategory.number >= pollenCat.toInteger())) {
-		msg = msg + " pollen index is ${state.pollenCategory.name}."
+		msg = msg + "Pollen Index is ${state.pollenCategory.name}. "
 	}	
 
 	if(open) {
