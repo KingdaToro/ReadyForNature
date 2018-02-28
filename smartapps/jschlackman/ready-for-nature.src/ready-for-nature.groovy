@@ -160,7 +160,7 @@ def send() {
 	def open = sensors.findAll { it?.latestValue("contact") == "open" }
 	def plural = open.size() > 1 ? "are" : "is"
 	def weather = null
-	def msg = "${open.join(', ')} ${plural} open and"
+	def msg = "${open.join(', ')} ${plural} open and "
 
 	// Check the rain forecast if requested by user
 	if(checkRain == "Yes") {
@@ -169,7 +169,7 @@ def send() {
 
 	// Send message about rain if it is expected.
 	if(weather) {
-		msg = msg + " ${weather} coming. "
+		msg = msg + "${weather} coming. "
 
 		// Report chance of rain if requested by user.
 		if (messageRainChance == "Yes") {
