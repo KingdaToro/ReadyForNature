@@ -2,8 +2,8 @@
  *	Ready for Nature
  *
  *	Author: brian@bevey.org, james@schlackman.org, motley74@gmail.com
- *  Version: 1.1
- *	Date: 2017-10-12
+ *  Version: 1.2
+ *	Date: 2018-03-11
  *
  *	Warn if doors or windows are open when inclement weather is approaching.
  *
@@ -40,6 +40,7 @@ preferences {
 			5:"High",
 			6:"Do not alert"
 		]
+        input "pollenKeywords", "text", title: "Alert on these pollen types only (enter keywords to check seperated by commas. e.g. rye grass, ragweed)", required: false
 		input "checkAir", "enum", title: "Check air quality? (Requires API key to be set in IDE)", options: ["Yes", "No"], defaultValue: "No", required: true
 		input "airNowCat", "enum", title: "Alert on this air quality or worse", required: true, defaultValue: 2, options: [
 			1:"Good",
@@ -249,10 +250,8 @@ private isStormy(forecast) {
 
 		// Check the forecast text for each of the precipitation types until we find one or exhaust the list
 		if(text) {
-			for (int i = 0; i < types.size() && !result; i++) {
-				if(text.contains(types[i])) {
-					result = types[i]
-				}
+			types.each {precipType ->
+            	if(text.contains(precipType)) {result = precipType}
 			}
 		} else {
 			log.warn("Got forecast, couldn't parse.")
@@ -411,6 +410,31 @@ private pollenCategory() {
 				log.debug("Failed to retrieve valid pollen data.")
 				result = ["name": "Invalid", "number": -1]
 			}
+            
+            // If we are only checking for particular allergens, do that now
+            if(pollenKeywords) {
+            
+            	def pollenFound = false
+            
+                // Get the list of allergen triggers
+                def triggersList = resp.data.Location.periods[1].Triggers.inject([]) { triggerresult, entry ->
+                    triggerresult << "${entry.Name}"
+                }.join(", ").toLowerCase()
+                
+                // check for each pollen keyword specified in settings
+                log.debug("Pollen triggers include $triggersList")
+                pollenKeywords.toLowerCase().tokenize(',').each {trigger ->
+                	log.debug("Checking for $trigger")
+                    if (triggersList.contains(trigger)) {pollenFound = true}
+                }
+                
+                // If we didn't find any of the pollen types specified, discard the pollen category returned earlier
+                if (pollenFound == false) {
+                	log.debug("Did not find any of the pollen types specified in settings, ignoring pollen index of $catNum")
+                	result = ["name": "Ignored", "number": -1]
+                }
+			}            
+            
 		}
 
 		// Ignore pollen category result if it is less than the configured alert category
