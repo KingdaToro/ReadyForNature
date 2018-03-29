@@ -203,8 +203,12 @@ def send() {
 			}
 
 			if(phone) {
-				log.debug("Sending text message.")
-				sendSms(phone, msg)
+            	// There might be multiple numbers specified, so create a variable that is always a list even if there's only one number
+				def phones = [] + phone
+                phones.each {smsDest ->
+                    log.debug("Sending text message to ${smsDest}.")
+                    sendSms(smsDest, msg)
+                }
 			}
 
 			// Send a TTS message if configured
