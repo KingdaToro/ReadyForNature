@@ -58,7 +58,7 @@ preferences {
 
 	section("Notifications") {
 		input "sendPushMessage", "enum", title: "Send a push notification", options: ["Yes", "No"], defaultValue: "No", required: true
-		input "phone", "phone", title: "Send a Text Message to number", required: false
+		input "phone", "phone", title: "Send a text message to number (or multiple numbers separated by a comma)", required: false
 	}
 
 	section("Audio alerts", hideWhenEmpty: true) {
