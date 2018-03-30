@@ -57,8 +57,10 @@ preferences {
 	}
 
 	section("Notifications") {
-		input "sendPushMessage", "enum", title: "Send a push notification", options: ["Yes", "No"], defaultValue: "No", required: true
-		input "phone", "phone", title: "Send a text message to number (or multiple numbers separated by a comma)", required: false
+     	input("recipients", "contact", title: "Send notifications to") {
+            input "sendPushMessage", "enum", title: "Send a push notification", options: ["Yes", "No"], defaultValue: "No", required: true
+            input "phone", "phone", title: "Send a text message to number (or multiple numbers separated by a comma)", required: false
+        }
 	}
 
 	section("Audio alerts", hideWhenEmpty: true) {
@@ -197,17 +199,25 @@ def send() {
 	if(open) {
 		if(now() - delay > state.lastMessage) {
 			state.lastMessage = now()
-			if(sendPushMessage == "Yes") {
-				log.debug("Sending push message.")
-				sendPush(msg)
-			}
 
-			if(phone) {
-            	// There might be multiple numbers specified, so create a variable that is always a list even if there's only one number
-				def phones = [] + phone
-                phones.each {smsDest ->
-                    log.debug("Sending text message to ${smsDest}.")
-                    sendSms(smsDest, msg)
+            if (location.contactBookEnabled && recipients) {
+                log.debug "Contact Book enabled, sending messages to $recipients"
+                sendNotificationToContacts(msg, recipients)
+            } else {
+                log.debug "Contact Book not enabled."
+
+                if(sendPushMessage == "Yes") {
+                    log.debug("Sending push message.")
+                    sendPush(msg)
+                }
+
+                if(phone) {
+                    // There might be multiple numbers specified, so create a variable that is always a list even if there's only one number
+                    def phones = [] + phone
+                    phones.each {smsDest ->
+                        log.debug("Sending text message to ${smsDest}.")
+                        sendSms(smsDest, msg)
+                    }
                 }
 			}
 
