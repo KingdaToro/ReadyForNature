@@ -2,8 +2,8 @@
  *	Ready for Nature
  *
  *	Author: brian@bevey.org, james@schlackman.org, motley74@gmail.com
- *  Version: 1.2
- *	Date: 2018-03-11
+ *  Version: 1.3
+ *	Date: 2018-03-13
  *
  *	Warn if doors or windows are open when inclement weather is approaching.
  *
@@ -30,7 +30,7 @@ preferences {
 	}
 
 	section("Forecast Options") {
-		input "forecastType", "enum", title: "Forecast range", options: ["Today", "Next Hour"], defaultValue: "Today", required: true
+		input "forecastType", "enum", title: "Forecast range", options: ["Today", "Next Hour/Part Day"], defaultValue: "Today", required: true
 		input "checkRain", "enum", title: "Check for rain?", options: ["Yes", "No"], defaultValue: "Yes", required: true
 		input "pollenCat", "enum", title: "Alert on this pollen index category or worse", required: false, options: [
 			1:"Low",
@@ -111,14 +111,7 @@ def scheduleCheck(evt) {
 	// If configured to check for rain, get the forecast.
 	if(checkRain == "Yes") {
 	
-		// Get the forecast type specified in the options.
-		if(forecastType == "Today") {
-			weatherFeature = getWeatherFeature("forecast", checkZip)
-			state.weatherForecast = weatherFeature?.forecast?.txt_forecast?.forecastday?.first()
-		} else {
-			weatherFeature = getWeatherFeature("hourly", checkZip)
-			state.weatherForecast = weatherFeature?.hourly_forecast?.first()
-		}
+		state.weatherForecast = getTwcForecast(checkZip)
 		def weather = isStormy(state.weatherForecast)
 
 		if(weather) {
@@ -255,9 +248,15 @@ private isStormy(forecast) {
 		
 		// Parse the JSON according to the type of forecast (daily or hourly)
 		if(forecastType == "Today") {
-			text = forecast?.fcttext?.toLowerCase()
+			text = forecast.narrative.first().toLowerCase()
 		} else {
-			text = forecast?.condition?.toLowerCase()
+			text = forecast.daypart[0].narrative[0]
+            if (!text) {
+            	// If the API is returning null data for the first daypart record, get the second record
+        		log.debug("Weather API returning null data in first daypart record.")
+            	text = forecast.daypart[0].narrative[1]
+            }
+            text = text.toLowerCase()
 		}
 
 		log.debug("Forecast conditions: ${text}")
@@ -284,7 +283,29 @@ private rainChance(forecast) {
 	def result = false
 
 	if(forecast) {
-		result = forecast?.pop + "%"
+  		
+        def text = null
+        def firstrec = 0
+
+		// Check if API is returning null data for the first daypart
+		if (!forecast.daypart[0].precipChance[0]) {
+        	log.debug("Weather API returning null data in first daypart record.")
+            firstrec = 1
+        }
+        
+    	// Parse the JSON according to the type of forecast (daily or hourly)
+		if((forecastType == "Today") && (forecast.daypart[0].dayOrNight[firstrec] == "N")) {
+        	// Only check the second daypart forecast if the first daypart is daytime
+            if (forecast.daypart[0].precipChance[firstrec + 1] > forecast.daypart[0].precipChance[firstrec]) {
+            	text = forecast.daypart[0].precipChance[firstrec + 1]
+            } else {
+            	text = forecast.daypart[0].precipChance[firstrec]
+            }
+		} else {
+			text = forecast.daypart[0].precipChance[firstrec]
+		}
+    
+		result = text + "%"
 	}	
 
 	return result
