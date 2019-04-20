@@ -2,8 +2,8 @@
  *	Ready for Nature
  *
  *	Author: brian@bevey.org, james@schlackman.org, motley74@gmail.com
- *  Version: 1.3
- *	Date: 2018-03-13
+ *  Version: 1.4
+ *	Date: 2019-04-20
  *
  *	Warn if doors or windows are open when inclement weather is approaching.
  *
@@ -25,55 +25,87 @@ definition(
 }
 
 preferences {
-	section("Zip Code") {
-		input "checkZip", "text", title: "Enter zip code to check, or leave blank to use hub location.", required: false
+	page(name: "mainPage", title: "Warn if doors or windows are open when inclement weather is approaching.", install: true, uninstall: true)
+	page(name: "timeNotificationInput", title: "Only send notifications during a certain time:") {
+		section {
+			input "notifyStarting", "time", title: "Starting", required: false
+			input "notifyEnding", "time", title: "Ending", required: false
+		}
 	}
-
-	section("Forecast Options") {
-		input "forecastType", "enum", title: "Forecast range", options: ["Today", "Next Hour/Part Day"], defaultValue: "Today", required: true
-		input "checkRain", "enum", title: "Check for rain?", options: ["Yes", "No"], defaultValue: "Yes", required: true
-		input "pollenCat", "enum", title: "Alert on this pollen index category or worse", required: false, options: [
-			1:"Low",
-			2:"Low-Medium",
-			3:"Medium",
-			4:"Medium-High",
-			5:"High",
-			6:"Do not alert"
-		]
-        input "pollenKeywords", "text", title: "Alert on these pollen types only (enter keywords to check seperated by commas. e.g. rye grass, ragweed)", required: false
-		input "checkAir", "enum", title: "Check air quality? (Requires API key to be set in IDE)", options: ["Yes", "No"], defaultValue: "No", required: true
-		input "airNowCat", "enum", title: "Alert on this air quality or worse", required: true, defaultValue: 2, options: [
-			1:"Good",
-			2:"Moderate",
-			3:"Unhealthy for Sensitive Groups",
-			4:"Unhealthy",
-			5:"Very Unhealthy",
-			6:"Hazardous"
-		]
+	page(name: "timeAudioInput", title: "Only alert with audio during a certain time:") {
+		section {
+			input "audioStarting", "time", title: "Starting", required: false
+			input "audioEnding", "time", title: "Ending", required: false
+		}
 	}
+}
+ 
+def mainPage() {
+	dynamicPage(name: "mainPage") {
+    
+    	section("Zip Code") {
+                input "checkZip", "text", title: "Enter zip code to check, or leave blank to use hub location.", required: false
+            }
 
-	section("Things to check") {
-		input "sensors", "capability.contactSensor", title: "Check if these contacts are open" , multiple: true
-	}
-
-	section("Notifications") {
-     	input("recipients", "contact", title: "Send notifications to") {
-            input "sendPushMessage", "enum", title: "Send a push notification", options: ["Yes", "No"], defaultValue: "No", required: true
-            input "phone", "phone", title: "Send a text message to number (or multiple numbers separated by a comma)", required: false
+        section("Forecast Options") {
+            input "forecastType", "enum", title: "Forecast range", options: ["Today", "Next Hour/Part Day"], defaultValue: "Today", required: true
+            input "checkRain", "enum", title: "Check for rain?", options: ["Yes", "No"], defaultValue: "Yes", required: true
+            input "pollenCat", "enum", title: "Alert on this pollen index category or worse", required: false, options: [
+                1:"Low",
+                2:"Low-Medium",
+                3:"Medium",
+                4:"Medium-High",
+                5:"High",
+                6:"Do not alert"
+            ]
+            input "pollenKeywords", "text", title: "Alert on these pollen types only (enter keywords to check seperated by commas. e.g. rye grass, ragweed)", required: false
+            input "checkAir", "enum", title: "Check air quality? (Requires API key to be set in IDE)", options: ["Yes", "No"], defaultValue: "No", required: true
+            input "airNowCat", "enum", title: "Alert on this air quality or worse", required: true, defaultValue: 2, options: [
+                1:"Good",
+                2:"Moderate",
+                3:"Unhealthy for Sensitive Groups",
+                4:"Unhealthy",
+                5:"Very Unhealthy",
+                6:"Hazardous"
+            ]
         }
-	}
 
-	section("Audio alerts", hideWhenEmpty: true) {
-		input "sonos", "capability.musicPlayer", title: "Play on this Music Player", required: false, multiple: true, submitOnChange: true
-		input "sonosVolume", "number", title: "Temporarily change volume", description: "0-100%", required: false, hideWhenEmpty: "sonos"
-		input "resumePlaying", "bool", title: "Resume currently playing music after notification", required: false, defaultValue: false, hideWhenEmpty: "sonos"
-	}
+        section("Things to check") {
+            input "sensors", "capability.contactSensor", title: "Check if these contacts are open" , multiple: true
+        }
 
-	section("Message options") {
-		input "messageDelay", "number", title: "Delay before sending initial message? Minutes (default to no delay)", required: false
-		input "messageReset", "number", title: "Delay before sending secondary messages? Minutes (default to every message)", required: false
-		input "messageRainChance", "enum", title: "Include chance of rain in message?", options: ["Yes", "No"], defaultValue: "No", required: true
-	}
+        section("Notifications") {
+            input("recipients", "contact", title: "Send notifications to") {
+                input "sendPushMessage", "enum", title: "Send a push notification", options: ["Yes", "No"], defaultValue: "No", required: true
+                input "phone", "phone", title: "Send a text message to number (or multiple numbers separated by a comma)", required: false
+            }
+            href "timeNotificationInput", title: "Only during a certain time", description: getTimeLabel(notifyStarting, notifyEnding) ?: "Tap to set", state: getTimeLabel(notifyStarting, notifyEnding) ? "complete" : "incomplete"
+        }
+
+        section("Audio alerts", hideWhenEmpty: true) {
+            input "sonos", "capability.musicPlayer", title: "Play on this Music Player", required: false, multiple: true, submitOnChange: true
+            input "sonosVolume", "number", title: "Temporarily change volume", description: "0-100%", required: false, hideWhenEmpty: "sonos"
+            input "resumePlaying", "bool", title: "Resume currently playing music after notification", required: false, defaultValue: false, hideWhenEmpty: "sonos"
+            href "timeAudioInput", title: "Only during a certain time", description: getTimeLabel(audioStarting, audioEnding) ?: "Tap to set", state: getTimeLabel(audioStarting, audioEnding) ? "complete" : "incomplete"
+        }
+
+        section("Message options") {
+            input "messageDelay", "number", title: "Delay before sending initial message? Minutes (default to no delay)", required: false
+            input "messageReset", "number", title: "Delay before sending secondary messages? Minutes (default to every message)", required: false
+            input "messageRainChance", "enum", title: "Include chance of rain in message?", options: ["Yes", "No"], defaultValue: "No", required: true
+        }
+    }
+}
+ 
+private hhmm(time, fmt = "h:mm a") {
+	def t = timeToday(time, location.timeZone)
+	def f = new java.text.SimpleDateFormat(fmt)
+	f.setTimeZone(location.timeZone ?: timeZone(time))
+	return f.format(t)
+}
+
+private getTimeLabel(starting, ending) {
+	return (starting && ending) ? hhmm(starting) + " - " + hhmm(ending, "h:mm a z") : ""
 }
 
 def installed() {
@@ -106,43 +138,42 @@ def scheduleCheck(evt) {
 	if(!open) {
 		log.info("Everything looks closed, no reason to check weather.")
 	} else if(expireWeather > state.lastCheck["time"]) {
-		log.info("Something's open, let's check the weather.")
+		
+        log.info("Something's open, let's check the weather.")
 
-	// If configured to check for rain, get the forecast.
-	if(checkRain == "Yes") {
-	
-		state.weatherForecast = getTwcForecast(checkZip)
-		def weather = isStormy(state.weatherForecast)
+        // If configured to check for rain, get the forecast.
+        if(checkRain == "Yes") {
 
-		if(weather) {
-			sendAlert = true
-		}
-	}
+            state.weatherForecast = getTwcForecast(checkZip)
+            def weather = isStormy(state.weatherForecast)
 
-	// If configured to check air quality, get the AQI from AirNow.
-	if(checkAir) {
-		state.airCategory = airNowCategory()
-		if(state.airCategory.number >= airNowCat.toInteger()) {
-			sendAlert = true
-		}
+            if(weather) {
+                sendAlert = true
+            }
+        }
 
-	}
-	
-	// If configured to check pollen, get the pollen index category.
-	if(pollenCat > 0) {
-		state.pollenCategory = pollenCategory()
-		if(state.pollenCategory.number >= pollenCat.toInteger()) {
-			sendAlert = true
-		}
+        // If configured to check air quality, get the AQI from AirNow.
+        if(checkAir) {
+            state.airCategory = airNowCategory()
+            if(state.airCategory.number >= airNowCat.toInteger()) {
+                sendAlert = true
+            }
 
-	}
+        }
 
-	// Send alert if either rain or AQI check requires it.
-	if(sendAlert) {
-		runIn(waitTime, "send", [overwrite: false])
-	}
+        // If configured to check pollen, get the pollen index category.
+        if(pollenCat > 0) {
+            state.pollenCategory = pollenCategory()
+            if(state.pollenCategory.number >= pollenCat.toInteger()) {
+                sendAlert = true
+            }
+        }
 
-	
+        // Send alert if either rain or AQI check requires it.
+        if(sendAlert) {
+            runIn(waitTime, "send", [overwrite: false])
+        }
+
 	} else if(state.lastCheck["result"]) {
 		log.info("We have fresh weather data, inclement weather is expected.")
 		runIn(waitTime, "send", [overwrite: false])
@@ -193,41 +224,55 @@ def send() {
 		if(now() - delay > state.lastMessage) {
 			state.lastMessage = now()
 
-            if (location.contactBookEnabled && recipients) {
-                log.debug "Contact Book enabled, sending messages to $recipients"
-                sendNotificationToContacts(msg, recipients)
-            } else {
-                log.debug "Contact Book not enabled."
+			// If a time window is specified, only send notifications if we are in the time period
+            if (isTimeOK(notifyStarting, notifyEnding)) {
+            
+                if (location.contactBookEnabled && recipients) {
+                    log.debug "Contact Book enabled, sending messages to $recipients"
+                    sendNotificationToContacts(msg, recipients)
+                } else {
+                    log.debug "Contact Book not enabled."
 
-                if(sendPushMessage == "Yes") {
-                    log.debug("Sending push message.")
-                    sendPush(msg)
-                }
+                    if(sendPushMessage == "Yes") {
+                        log.debug("Sending push message.")
+                        sendPush(msg)
+                    }
 
-                if(phone) {
-                    // There might be multiple numbers specified, so create a variable that is always a list even if there's only one number
-                    def phones = [] + phone
-                    phones.each {smsDest ->
-                        log.debug("Sending text message to ${smsDest}.")
-                        sendSms(smsDest, msg)
+                    if(phone) {
+                        // There might be multiple numbers specified, so create a variable that is always a list even if there's only one number
+                        def phones = [] + phone
+                        phones.each {smsDest ->
+                            log.debug("Sending text message to ${smsDest}.")
+                            sendSms(smsDest, msg)
+                        }
                     }
                 }
-			}
+            } else {
+            	log.debug "Not sending notifications outside configured time period."
+            }
 
 			// Send a TTS message if configured
 			if(sonos) {
-				def sonosCommand = resumePlaying == true ? "playTrackAndResume" : "playTrackAndRestore"
-				def ttsMsg = textToSpeech(msg)
+            	
+                // If a time window is specified, only send TTS message if we are in the time period
+            	if (isTimeOK(audioStarting, audioEnding)) {
+            	
+                    def sonosCommand = resumePlaying == true ? "playTrackAndResume" : "playTrackAndRestore"
+                    def ttsMsg = textToSpeech(msg)
 
-				// Send message with a custom volume level if requested
-				if(sonosVolume) {
-					sonos."${sonosCommand}"(ttsMsg.uri, ttsMsg.duration, sonosVolume)
-				} else {
-					sonos."${sonosCommand}"(ttsMsg.uri, ttsMsg.duration)
-				}
+                    // Send message with a custom volume level if requested
+                    if(sonosVolume) {
+                        sonos."${sonosCommand}"(ttsMsg.uri, ttsMsg.duration, sonosVolume)
+                    } else {
+                        sonos."${sonosCommand}"(ttsMsg.uri, ttsMsg.duration)
+                    }
+                } else {
+            		log.debug "Not sending TTS message outside configured time period."
+            	}
 			}
 
 			log.debug(msg)
+            
 		} else {
 			log.info("Have a message to send, but user requested to not get it.")
 		}
@@ -275,6 +320,18 @@ private isStormy(forecast) {
 
 	state.lastCheck = ["time": now(), "result": result]
 
+	return result
+}
+
+private isTimeOK(starting, ending) {
+	def result = true
+	if (starting && ending) {
+		def currTime = now()
+		def start = timeToday(starting, location?.timeZone).time
+		def stop = timeToday(ending, location?.timeZone).time
+		result = start < stop ? currTime >= start && currTime <= stop : currTime <= stop || currTime >= start
+	}
+	log.trace "Time period OK to send = $result"
 	return result
 }
 
@@ -469,7 +526,6 @@ private pollenCategory() {
                 	result = ["name": "Ignored", "number": -1]
                 }
 			}            
-            
 		}
 
 		// Ignore pollen category result if it is less than the configured alert category
