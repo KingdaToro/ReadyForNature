@@ -2,8 +2,8 @@
  *	Ready for Nature
  *
  *	Author: brian@bevey.org, james@schlackman.org, motley74@gmail.com
- *  Version: 1.4
- *	Date: 2019-04-20
+ *  Version: 1.5
+ *	Date: 2019-06-08
  *
  *	Warn if doors or windows are open when inclement weather is approaching.
  *
@@ -50,6 +50,7 @@ def mainPage() {
         section("Forecast Options") {
             input "forecastType", "enum", title: "Forecast range", options: ["Today", "Next Hour/Part Day"], defaultValue: "Today", required: true
             input "checkRain", "enum", title: "Check for rain?", options: ["Yes", "No"], defaultValue: "Yes", required: true
+            input "rainThreshold", "number", title: "Only alert is percentage chance of rain is at least", required: false, range: "0..100"
             input "pollenCat", "enum", title: "Alert on this pollen index category or worse", required: false, options: [
                 1:"Low",
                 2:"Low-Medium",
@@ -148,7 +149,21 @@ def scheduleCheck(evt) {
             def weather = isStormy(state.weatherForecast)
 
             if(weather) {
-                sendAlert = true
+
+                def rain = rainChance(state.weatherForecast)
+                def rainReportPc = 0
+
+                // Check if the user configured a threshold for rain reports
+                if (rainThreshold) {
+                    rainReportPc = rainThreshold
+                }
+
+                // Only send the alert if the threshold is met
+                if (rain.toInteger() >= rainReportPc) {
+					sendAlert = true
+            	} else {
+        			log.debug "Chance of rain is not above configured threshold."
+        		}
             }
         }
 
@@ -196,13 +211,15 @@ def send() {
 
 	// Send message about rain if it is expected.
 	if(weather) {
-		msg = msg + "${weather} coming. "
+        def rainReportPc = 0
+        
+        msg = msg + "${weather} coming. "
 
-		// Report chance of rain if requested by user.
-		if (messageRainChance == "Yes") {
-			def rain = rainChance(state.weatherForecast)
-			msg = msg + "Chance of rain ${rain}. "
-		}
+        // Report chance of rain if requested by user.
+        if (messageRainChance == "Yes") {
+            def rain = rainChance(state.weatherForecast)
+            msg = msg + "Chance of rain ${rain}%. "
+        }
 	}
 
 	// Send message about air quality if it meets or exceeds the requested alert category
@@ -362,7 +379,7 @@ private rainChance(forecast) {
 			text = forecast.daypart[0].precipChance[firstrec]
 		}
     
-		result = text + "%"
+		result = text
 	}	
 
 	return result
